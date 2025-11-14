@@ -1,0 +1,34 @@
+# Input bindings are passed in via param block.
+param($QueueItemInbound, $TriggerMetadata)
+
+# Write out the queue message and insertion time to the information log.
+Write-Host "PowerShell queue trigger function processed work item: $QueueItemInbound"
+Write-Host "Queue item insertion time: $($TriggerMetadata.InsertionTime)"
+
+#Extract Required fields
+$ordernumber = $QueueItemInbound["ordernumber"]
+$zipcode = $QueueItemInbound["zipcode"]
+$customerID = $QueueItemInbound["customerID"]
+$total = $QueueItemInbound["total"]
+
+#Generate Invoice Text
+$Invoicetext = @"
+ordernumber: $ordernumber
+CustomerID: $customerID
+Shipping Destintation: $zipcode
+Total: $total 
+"@
+
+#Push to blob storage explicitly using the correct binding
+"Creating Invoice file"
+Push-Outputbinding -Name outboundblob -Value $Invoicetext
+
+"Creating Table Entry"
+Push-Outputbinding -Name OutboundTable -Value @{
+    Partitionkey = $customerID
+    Rowkey = $ordernumber
+    Zipcode = $zipcode
+    total = $total
+}
+
+"$ordernumber processed successfully."
