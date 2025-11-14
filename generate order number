@@ -1,0 +1,32 @@
+using namespace System.Net
+
+# Input bindings are passed in via param block.
+param($RequestInbound, $TriggerMetadata)
+
+$body =" "
+$orderdetails = @{
+    customerID = $RequestInbound.body.customerID
+    zipcode= $RequestInbound.body.zipcode
+    total= $RequestInbound.body.total
+}
+
+$Timestamp = (Get-date -Format "yyyyMMdd-hhmmssfff")
+$randomdigit = (Get-random -Minimum 1000 -Maximum 9999)
+$ordernumber = "$Timestamp-$randomdigit"
+$orderdetails['ordernumber'] = $ordernumber
+
+"Processing Order $ordernumber"
+"Sending Queue Message"
+$message = $orderdetails | ConvertTo-JSON -Compress
+Push-OutputBinding -Name Outputqueueitem -value $message
+
+$body = "Order $ordernumber Successfully processed."
+$body
+
+
+
+# Associate values to output bindings by calling 'Push-OutputBinding'.
+Push-OutputBinding -Name ResponseOutbound -Value ([HttpResponseContext]@{
+    StatusCode = [HttpStatusCode]::OK
+    Body = $body
+})
